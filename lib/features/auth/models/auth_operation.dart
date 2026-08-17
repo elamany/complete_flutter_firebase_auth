@@ -1,0 +1,16 @@
+enum AuthOperation {
+  none,
+  signIn,
+  register,
+  googleSignIn,
+  signOut,
+  passwordReset,
+  sendEmailVerification,
+  refreshEmailVerification,
+  createPassword,
+  updatePassword,
+  updateUserName,
+  deleteAccount,
+  linkGoogle,
+  linkPassword,
+}
