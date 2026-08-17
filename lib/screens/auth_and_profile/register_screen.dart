@@ -18,6 +18,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _displayNameController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -27,38 +28,40 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+  _displayNameController.dispose();
 
     super.dispose();
   }
 
   Future<void> _register() async {
-  if (!_formKey.currentState!.validate()) {
-    return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
+    await ref.read(authControllerProvider.notifier).signUp(
+          _emailController.text.trim(),
+          _passwordController.text,
+          _displayNameController.text.trim(),
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    final authState = ref.read(authControllerProvider);
+
+    if (authState.hasError) {
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => const VerifyEmailScreen(),
+      ),
+    );
   }
-
-  FocusScope.of(context).unfocus();
-
-  await ref.read(authControllerProvider.notifier).signUp(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
-
-  if (!mounted) {
-    return;
-  }
-
-  final authState = ref.read(authControllerProvider);
-
-  if (authState.hasError) {
-    return;
-  }
-
-  Navigator.of(context).pushReplacement(
-    MaterialPageRoute(
-      builder: (_) => const VerifyEmailScreen(),
-    ),
-  );
-}
 
   
 
@@ -100,6 +103,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 32),
+              TextFormField(
+                controller: _displayNameController,
+                keyboardType: TextInputType.name,
+                textInputAction: TextInputAction.next,
+                autocorrect: false,
+                enabled: !isLoading,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'User name',
+                  hintText: 'Enter your name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  final displayName = value?.trim() ?? '';
+
+                  if (displayName.isEmpty) {
+                    return 'Display name is required.';
+                  }
+
+                  if (displayName.length < 2) {
+                    return 'Display name must be at least 2 characters.';
+                  }
+
+                  if (displayName.length > 50) {
+                    return 'Display name must be 50 characters or less.';
+                  }
+
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
 
               TextFormField(
                 controller: _emailController,

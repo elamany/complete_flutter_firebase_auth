@@ -43,22 +43,22 @@ class UserFirestoreService {
   }
 
   Future<void> createUserIfNotExists({
-  required String uid,
-  required String email,
-  String? displayName,
-}) async {
-  await userDocument(uid).set(
-    {
-      'email': email,
-      'displayName': displayName,
-      'profileCompleted': false,
-      'createdAt': FieldValue.serverTimestamp(),
-    },
-    SetOptions(
-      merge: true,
-    ),
-  );
-}
+    required String uid,
+    required String email,
+    String? displayName,
+  }) async {
+    await userDocument(uid).set(
+      {
+        'email': email,
+        'displayName': displayName,
+        'profileCompleted': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(
+        merge: true,
+      ),
+    );
+  }
 
   Future<void> updateProfile({
     required String uid,
@@ -68,5 +68,9 @@ class UserFirestoreService {
       'displayName': displayName,
       'profileCompleted': true,
     });
+  }
+
+  Future<void> deleteUser(String uid) async {
+    await userDocument(uid).delete();
   }
 }

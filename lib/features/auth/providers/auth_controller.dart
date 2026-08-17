@@ -2,6 +2,7 @@ import 'package:flutter_firebase_auth/features/auth/data/firebase_auth_service.d
 import 'package:flutter_firebase_auth/features/user/data/user_firestore_service.dart';
 import 'package:flutter_firebase_auth/features/user/providers/user_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'auth_provider.dart';
 
 final authControllerProvider =
@@ -28,6 +29,7 @@ class AuthController extends AsyncNotifier<void> {
   Future<void> signUp(
     String email,
     String password,
+    String displayName,
   ) async {
     state = const AsyncLoading();
 
@@ -46,10 +48,14 @@ class AuthController extends AsyncNotifier<void> {
         );
       }
 
+      await _authService.updateUserName(
+        displayName,
+      );
+
       await _userService.createUserIfNotExists(
         uid: user.uid,
         email: user.email ?? email,
-        displayName: user.displayName,
+        displayName: displayName.trim(),
       );
 
       await _authService.sendEmailVerification();
@@ -319,14 +325,33 @@ class AuthController extends AsyncNotifier<void> {
   // ============================================================
 
   Future<void> deleteAccount({
-  String? currentPassword,
+    String? currentPassword,
   }) async {
     state = const AsyncLoading();
 
     state = await AsyncValue.guard(() async {
-      await _authService.deleteAccount(
+      final user = _authService.currentUser;
+
+      if (user == null) {
+        throw StateError(
+          'No user is currently logged in.',
+        );
+      }
+
+      final uid = user.uid;
+
+      await _authService.reauthenticate(
         currentPassword: currentPassword,
       );
+
+      await _userService.deleteUser(uid);
+
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {
+        // Firebase account deletion already completed.
+      }
+
     });
   }
 

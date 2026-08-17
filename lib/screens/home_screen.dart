@@ -1,8 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_firebase_auth/features/auth/providers/auth_provider.dart';
-import 'package:flutter_firebase_auth/screens/auth_and_profile/login_screen.dart';
-import 'package:flutter_firebase_auth/screens/auth_and_profile/profile_screen.dart';
+import 'package:flutter_firebase_auth/features/user/providers/user_provider.dart';
+import 'package:flutter_firebase_auth/widgets/home_content.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -11,6 +10,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    final appUserAsync = ref.watch(appUserProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -31,78 +31,38 @@ class HomeScreen extends ConsumerWidget {
               ),
             );
           },
-          data: (user) {
-            return _HomeContent(
-              user: user,
+          data: (firebaseUser) {
+            if (firebaseUser == null) {
+              return const HomeContent(
+                isLoggedIn: false,
+              );
+            }
+
+            return appUserAsync.when(
+              loading: () {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              },
+              error: (error, stackTrace) {
+                return Center(
+                  child: Text(
+                    'Unable to load your profile.\n$error',
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              },
+              data: (appUser) {
+                final displayName =
+                    appUser?.displayName?.trim();
+
+                return HomeContent(
+                  isLoggedIn: true,
+                  displayName: displayName,
+                );
+              },
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeContent extends StatelessWidget {
-  final User? user;
-
-  const _HomeContent({
-    required this.user,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isLoggedIn = user != null;
-
-    final displayName = user?.displayName?.trim();
-
-    final greetingName = displayName == null ||
-            displayName.isEmpty
-        ? 'there'
-        : displayName;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              isLoggedIn
-                  ? 'Welcome, $greetingName!'
-                  : 'Welcome!',
-              textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium,
-            ),
-
-            const SizedBox(height: 24),
-
-            if (isLoggedIn)
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const ProfileScreen(),
-                    ),
-                  );
-                },
-                child: const Text('My Profile'),
-              )
-            else
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const LoginScreen(),
-                    ),
-                  );
-                },
-                child: const Text('Sign in'),
-              ),
-          ],
         ),
       ),
     );

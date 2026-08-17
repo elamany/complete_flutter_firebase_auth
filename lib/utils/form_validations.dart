@@ -43,3 +43,21 @@ String? validateEmail(String? value) {
 
     return null;
   }
+
+  String? validateDisplayName(String? value) {
+    final displayName = value?.trim() ?? '';
+
+    if (displayName.isEmpty) {
+      return 'Display name is required.';
+    }
+
+    if (displayName.length < 2) {
+      return 'Display name must be at least 2 characters.';
+    }
+
+    if (displayName.length > 50) {
+      return 'Display name must be 50 characters or less.';
+    }
+
+    return null;
+  }
