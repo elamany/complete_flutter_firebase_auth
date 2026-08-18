@@ -396,7 +396,7 @@ Do not deploy permissive Firestore rules such as allowing unrestricted reads and
 
 Clone the repository:
 ```bash
-git clone https://github.com/elamany/flutter_firebase_auth.git
+git clone https://github.com/elamany/complete_flutter_firebase_auth.git
 ```
 
 Enter the project directory:
