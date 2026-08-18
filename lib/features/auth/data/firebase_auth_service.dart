@@ -10,6 +10,10 @@ bool _googleInitialized = false;
     return firebaseAuth.authStateChanges();
   }
 
+  Stream<User?> get userChanges {
+    return firebaseAuth.userChanges();
+  }
+
   // ============================================================
   // CURRENT USER
   // ============================================================
@@ -175,22 +179,17 @@ bool _googleInitialized = false;
   // LINK PASSWORD TO CURRENT ACCOUNT
   // ============================================================
 
-  Future<UserCredential> linkPasswordCredential(String password) async {
+  Future<void> linkPasswordCredential(
+    String password,
+  ) async {
     final user = _requireCurrentUser();
 
     final email = user.email;
 
     if (email == null || email.isEmpty) {
       throw FirebaseAuthException(
-        code: 'user-email-missing',
+        code: 'missing-email',
         message: 'The current user does not have an email address.',
-      );
-    }
-
-    if (hasPasswordProvider) {
-      throw FirebaseAuthException(
-        code: 'provider-already-linked',
-        message: 'Email and password are already linked to this account.',
       );
     }
 
@@ -199,7 +198,17 @@ bool _googleInitialized = false;
       password: password,
     );
 
-    return user.linkWithCredential(credential);
+    await user.linkWithCredential(credential);
+
+    await user.reload();
+  }
+
+  Future<User?> reloadCurrentUser() async {
+    final user = _requireCurrentUser();
+
+    await user.reload();
+
+    return firebaseAuth.currentUser;
   }
 
   // ============================================================

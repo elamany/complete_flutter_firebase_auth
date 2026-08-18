@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_firebase_auth/features/auth/providers/auth_controller.dart';
 import 'package:flutter_firebase_auth/features/auth/providers/auth_provider.dart';
-import 'package:flutter_firebase_auth/features/user/providers/user_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_firebase_auth/screens/home_screen.dart';
 

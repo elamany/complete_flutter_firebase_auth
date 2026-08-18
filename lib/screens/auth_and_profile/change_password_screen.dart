@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_firebase_auth/features/auth/providers/auth_controller.dart';
 import 'package:flutter_firebase_auth/features/auth/providers/auth_provider.dart';
@@ -18,14 +19,9 @@ class _ChangePasswordScreenState
     extends ConsumerState<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _currentPasswordController =
-      TextEditingController();
-
-  final _newPasswordController =
-      TextEditingController();
-
-  final _confirmPasswordController =
-      TextEditingController();
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
@@ -40,37 +36,38 @@ class _ChangePasswordScreenState
     super.dispose();
   }
 
-  String? _validateNewPassword(String? value) {
-    return validatePassword(value);
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    final confirmPassword = value ?? '';
-
-    if (confirmPassword.isEmpty) {
-      return 'Please confirm your new password.';
-    }
-
-    if (confirmPassword != _newPasswordController.text) {
-      return 'Passwords do not match.';
-    }
-
-    return null;
-  }
-
-  Future<void> _changePassword() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     FocusScope.of(context).unfocus();
 
-    await ref
-        .read(authControllerProvider.notifier)
-        .updatePassword(
-          _currentPasswordController.text,
-          _newPasswordController.text,
-        );
+    final firebaseUser = ref.read(currentUserProvider);
+
+    if (firebaseUser == null) {
+      return;
+    }
+
+    final hasPasswordProvider = firebaseUser.providerData.any(
+      (provider) =>
+          provider.providerId == EmailAuthProvider.PROVIDER_ID,
+    );
+
+    if (hasPasswordProvider) {
+      await ref
+          .read(authControllerProvider.notifier)
+          .updatePassword(
+            _currentPasswordController.text,
+            _newPasswordController.text,
+          );
+    } else {
+      await ref
+          .read(authControllerProvider.notifier)
+          .linkPasswordCredential(
+            _newPasswordController.text,
+          );
+    }
 
     if (!mounted) {
       return;
@@ -83,9 +80,11 @@ class _ChangePasswordScreenState
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          'Password changed successfully.',
+          hasPasswordProvider
+              ? 'Password changed successfully.'
+              : 'Password created successfully.',
         ),
       ),
     );
@@ -100,12 +99,13 @@ class _ChangePasswordScreenState
 
     final isLoading = authState.isLoading;
 
-    final hasPasswordProvider =
-        firebaseUser?.providerData.any(
-              (provider) =>
-                  provider.providerId == 'password',
-            ) ??
-            false;
+    final hasPasswordProvider = firebaseUser?.providerData.any(
+          (provider) =>
+              provider.providerId == EmailAuthProvider.PROVIDER_ID,
+        ) ??
+        false;
+
+        debugPrint('hasPasswordProvider:---> $hasPasswordProvider');
 
     ref.listen(authControllerProvider, (previous, next) {
       next.whenOrNull(
@@ -121,27 +121,13 @@ class _ChangePasswordScreenState
       );
     });
 
-    if (!hasPasswordProvider) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Change password'),
-        ),
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'Your account does not currently have '
-              'an email and password sign-in method.',
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Change password'),
+        title: Text(
+          hasPasswordProvider
+              ? 'Change password'
+              : 'Create password',
+        ),
       ),
       body: SafeArea(
         child: Form(
@@ -149,54 +135,72 @@ class _ChangePasswordScreenState
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              const Icon(
+                Icons.lock_outline,
+                size: 72,
+              ),
+
+              const SizedBox(height: 24),
+
               Text(
-                'Change your password',
+                hasPasswordProvider
+                    ? 'Change your password'
+                    : 'Create a password',
+                textAlign: TextAlign.center,
                 style: Theme.of(context)
                     .textTheme
                     .headlineMedium,
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
 
-              const Text(
-                'Enter your current password and choose '
-                'a new password.',
+              Text(
+                hasPasswordProvider
+                    ? 'Enter your current password and choose a new password.'
+                    : 'Your account currently uses Google Sign-In. '
+                      'Create a password to also sign in with your email and password.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium,
               ),
 
               const SizedBox(height: 32),
 
-              TextFormField(
-                controller: _currentPasswordController,
-                obscureText: _obscureCurrentPassword,
-                textInputAction: TextInputAction.next,
-                enabled: !isLoading,
-                decoration: InputDecoration(
-                  labelText: 'Current password',
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _obscureCurrentPassword =
-                            !_obscureCurrentPassword;
-                      });
-                    },
-                    icon: Icon(
-                      _obscureCurrentPassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+              if (hasPasswordProvider) ...[
+                TextFormField(
+                  controller: _currentPasswordController,
+                  obscureText: _obscureCurrentPassword,
+                  textInputAction: TextInputAction.next,
+                  enabled: !isLoading,
+                  decoration: InputDecoration(
+                    labelText: 'Current password',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _obscureCurrentPassword =
+                              !_obscureCurrentPassword;
+                        });
+                      },
+                      icon: Icon(
+                        _obscureCurrentPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
                     ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Current password is required.';
+                    }
+
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Current password is required.';
-                  }
 
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
 
               TextFormField(
                 controller: _newPasswordController,
@@ -220,7 +224,7 @@ class _ChangePasswordScreenState
                     ),
                   ),
                 ),
-                validator: _validateNewPassword,
+                validator: ((value) =>  validatePassword(value)),
               ),
 
               const SizedBox(height: 16),
@@ -232,11 +236,11 @@ class _ChangePasswordScreenState
                 enabled: !isLoading,
                 onFieldSubmitted: (_) {
                   if (!isLoading) {
-                    _changePassword();
+                    _submit();
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: 'Confirm new password',
+                  labelText: 'Confirm password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
                     onPressed: () {
@@ -252,7 +256,7 @@ class _ChangePasswordScreenState
                     ),
                   ),
                 ),
-                validator: _validateConfirmPassword,
+                validator: ((value) => validateConfirmPassword(value, _newPasswordController.text)),
               ),
 
               const SizedBox(height: 24),
@@ -260,8 +264,7 @@ class _ChangePasswordScreenState
               SizedBox(
                 height: 52,
                 child: FilledButton(
-                  onPressed:
-                      isLoading ? null : _changePassword,
+                  onPressed: isLoading ? null : _submit,
                   child: isLoading
                       ? const SizedBox(
                           width: 22,
@@ -270,11 +273,25 @@ class _ChangePasswordScreenState
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'Change password',
+                      : Text(
+                          hasPasswordProvider
+                              ? 'Change password'
+                              : 'Create password',
                         ),
                 ),
               ),
+
+              const SizedBox(height: 16),
+
+              if (!hasPasswordProvider)
+                Text(
+                  'After creating a password, you can sign in '
+                  'with either Google or your email and password.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall,
+                ),
             ],
           ),
         ),
@@ -291,6 +308,18 @@ class _ChangePasswordScreenState
 
     if (message.contains('requires-recent-login')) {
       return 'Please sign in again before changing your password.';
+    }
+
+    if (message.contains('provider-already-linked')) {
+      return 'A password is already linked to this account.';
+    }
+
+    if (message.contains('user-not-logged-in')) {
+      return 'No user is currently signed in.';
+    }
+
+    if (message.contains('email-already-in-use')) {
+      return 'This email address is already associated with another account.';
     }
 
     return message;
