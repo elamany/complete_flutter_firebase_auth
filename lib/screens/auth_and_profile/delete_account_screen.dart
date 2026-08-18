@@ -3,6 +3,7 @@ import 'package:flutter_firebase_auth/features/auth/providers/auth_controller.da
 import 'package:flutter_firebase_auth/features/auth/providers/auth_provider.dart';
 import 'package:flutter_firebase_auth/features/user/providers/user_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_firebase_auth/screens/home_screen.dart';
 
 class DeleteAccountScreen extends ConsumerStatefulWidget {
   const DeleteAccountScreen({
@@ -47,20 +48,17 @@ class _DeleteAccountScreenState
           currentPassword: _passwordController.text,
         );
 
-    if (!mounted) {
-      return;
-    }
-
     final authState = ref.read(authControllerProvider);
 
     if (authState.hasError) {
       return;
     }
 
-    ref.invalidate(appUserProvider);
-
-    Navigator.of(context).popUntil(
-      (route) => route.isFirst,
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const HomeScreen(),
+      ),
+      (route) => false,
     );
   }
 

@@ -325,6 +325,26 @@ class AuthController extends AsyncNotifier<void> {
   // ============================================================
 
   Future<void> deleteAccount({
+  String? currentPassword,
+}) async {
+  state = const AsyncLoading();
+
+  state = await AsyncValue.guard(() async {
+    await _authService.deleteAccount(
+      currentPassword: currentPassword,
+    );
+
+    ref.invalidate(currentUserProvider);
+    ref.invalidate(authStateProvider);
+    ref.invalidate(appUserProvider);
+    try {
+        await GoogleSignIn.instance.signOut();
+    } catch (_) {
+      // Firebase account deletion already completed.
+    }
+  });
+}
+  /*Future<void> deleteAccount({
     String? currentPassword,
   }) async {
     state = const AsyncLoading();
@@ -353,7 +373,7 @@ class AuthController extends AsyncNotifier<void> {
       }
 
     });
-  }
+  }*/
 
 
 }
